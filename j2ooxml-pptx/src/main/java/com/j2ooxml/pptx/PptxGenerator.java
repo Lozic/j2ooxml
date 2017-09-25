@@ -17,7 +17,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+
 import org.apache.commons.imaging.ImageInfo;
+import org.apache.commons.imaging.ImageReadException;
 import org.apache.commons.imaging.Imaging;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.sl.usermodel.PlaceableShape;
@@ -32,21 +36,25 @@ import org.openxmlformats.schemas.drawingml.x2006.main.CTNonVisualPicturePropert
 import org.openxmlformats.schemas.presentationml.x2006.main.CTPicture;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTPictureNonVisual;
 import org.w3c.css.sac.InputSource;
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.w3c.dom.css.CSSRule;
 import org.w3c.dom.css.CSSRuleList;
 import org.w3c.dom.css.CSSStyleDeclaration;
 import org.w3c.dom.css.CSSStyleRule;
 import org.w3c.dom.css.CSSStyleSheet;
+import org.xml.sax.SAXException;
 
 import com.j2ooxml.pptx.util.XmlUtil;
 import com.steadystate.css.parser.CSSOMParser;
 
 public class PptxGenerator {
 
-    private VariableProcessor variableProcessor = new VariableProcessor();
+    private static final String NO_BACKGROUND = "no-background";
 
-    private ImageReplacer imageReplacer = new ImageReplacer();
+    private VariableProcessor variableProcessor = new VariableProcessor();
 
     private VideoReplacer videoReplacer = new VideoReplacer();
 
@@ -76,7 +84,7 @@ public class PptxGenerator {
                         String slide = slideXml.getFileName().toString();
                         Path relXml = fs.getPath("/ppt/slides/_rels/" + slide + ".rels");
 
-                        State state = imageReplacer.replace(fs, slideXml, model, css);
+                        State state = initState(fs, slideXml, model, css);
                         videoReplacer.replace(fs, slideXml, state, model);
                         deletor.process(state, model);
                         variableProcessor.process(state, css, model);
@@ -236,6 +244,29 @@ public class PptxGenerator {
 
         } catch (Exception e) {
             throw new GenerationException("Could not generate resulting ppt.", e);
+        }
+    }
+
+    private State initState(FileSystem fs, Path slideXml, Map<String, Object> model, CSSStyleSheet css) throws IOException,
+            ParserConfigurationException, SAXException, XPathExpressionException, DOMException, ImageReadException {
+        Document slideDoc = XmlUtil.parse(slideXml);
+
+        String slide = slideXml.getFileName().toString();
+        Path slideXmlRel = fs.getPath("/ppt/slides/_rels/" + slide + ".rels");
+        Document relsDoc = XmlUtil.parse(slideXmlRel);
+
+        processBackground(model, slideDoc);
+        return new State(slideDoc, relsDoc);
+    }
+
+    private void processBackground(Map<String, Object> model, Document slideDoc) {
+        Boolean noBackground = (Boolean) model.get(NO_BACKGROUND);
+        if (noBackground != null && noBackground) {
+            NodeList bgs = slideDoc.getElementsByTagName("p:bg");
+            if (bgs.getLength() > 0) {
+                Node bg = bgs.item(0);
+                bg.getParentNode().removeChild(bg);
+            }
         }
     }
 

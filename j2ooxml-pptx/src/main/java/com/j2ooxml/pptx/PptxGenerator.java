@@ -27,19 +27,20 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.sl.usermodel.PlaceableShape;
 import org.apache.poi.util.IOUtils;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
+import org.apache.poi.xslf.usermodel.XSLFBackground;
 import org.apache.poi.xslf.usermodel.XSLFConnectorShape;
 import org.apache.poi.xslf.usermodel.XSLFPictureShape;
 import org.apache.poi.xslf.usermodel.XSLFShape;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
 import org.apache.poi.xslf.usermodel.XSLFTextShape;
 import org.openxmlformats.schemas.drawingml.x2006.main.CTNonVisualPictureProperties;
+import org.openxmlformats.schemas.presentationml.x2006.main.CTBackground;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTPicture;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTPictureNonVisual;
 import org.w3c.css.sac.InputSource;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.w3c.dom.css.CSSRule;
 import org.w3c.dom.css.CSSRuleList;
 import org.w3c.dom.css.CSSStyleDeclaration;
@@ -119,6 +120,14 @@ public class PptxGenerator {
             XMLSlideShow ppt = new XMLSlideShow(Files.newInputStream(outputPath));
 
             for (XSLFSlide slide : ppt.getSlides()) {
+                Boolean noBackground = (Boolean) model.get(NO_BACKGROUND);
+                if (noBackground) {
+                    XSLFBackground bg = slide.getBackground();
+                    CTBackground xmlBg = (CTBackground) bg.getXmlObject();
+                    Node bgDomNode = xmlBg.getDomNode();
+                    bgDomNode.getParentNode().removeChild(bgDomNode);
+                }
+
                 List<XSLFShape> shpesToRemove = new ArrayList<>();
                 for (XSLFShape sh : slide.getShapes()) {
                     String name = sh.getShapeName();
@@ -255,19 +264,7 @@ public class PptxGenerator {
         Path slideXmlRel = fs.getPath("/ppt/slides/_rels/" + slide + ".rels");
         Document relsDoc = XmlUtil.parse(slideXmlRel);
 
-        processBackground(model, slideDoc);
         return new State(slideDoc, relsDoc);
-    }
-
-    private void processBackground(Map<String, Object> model, Document slideDoc) {
-        Boolean noBackground = (Boolean) model.get(NO_BACKGROUND);
-        if (noBackground != null && noBackground) {
-            NodeList bgs = slideDoc.getElementsByTagName("p:bg");
-            if (bgs.getLength() > 0) {
-                Node bg = bgs.item(0);
-                bg.getParentNode().removeChild(bg);
-            }
-        }
     }
 
     private double parseLength(String propertyValue) {

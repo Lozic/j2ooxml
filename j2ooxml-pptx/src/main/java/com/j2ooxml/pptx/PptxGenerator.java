@@ -59,8 +59,6 @@ public class PptxGenerator {
 
     private VideoReplacer videoReplacer = new VideoReplacer();
 
-    private EmptyNodesRemover emptyNodesRemover = new EmptyNodesRemover();
-
     public void process(Path templatePath, Path cssPath, Path outputPath, Map<String, Object> model)
             throws IOException, GenerationException {
         try {
@@ -101,16 +99,6 @@ public class PptxGenerator {
                 }
             }
 
-            slides = fs.getPath("/ppt/slideLayouts");
-            try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(slides)) {
-                for (Path slideXml : directoryStream) {
-                    if (Files.isRegularFile(slideXml)) {
-                        Document slideDoc = XmlUtil.parse(slideXml);
-                        emptyNodesRemover.process(slideDoc, model);
-                        XmlUtil.save(slideXml, slideDoc);
-                    }
-                }
-            }
             Properties.fillProperies(fs, model);
             fs.close();
 

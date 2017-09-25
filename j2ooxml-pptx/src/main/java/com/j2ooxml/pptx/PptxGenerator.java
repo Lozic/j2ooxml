@@ -59,8 +59,6 @@ public class PptxGenerator {
 
     private VideoReplacer videoReplacer = new VideoReplacer();
 
-    private Deletor deletor = new Deletor();
-
     private EmptyNodesRemover emptyNodesRemover = new EmptyNodesRemover();
 
     public void process(Path templatePath, Path cssPath, Path outputPath, Map<String, Object> model)
@@ -87,7 +85,6 @@ public class PptxGenerator {
 
                         State state = initState(fs, slideXml, model, css);
                         videoReplacer.replace(fs, slideXml, state, model);
-                        deletor.process(state, model);
                         variableProcessor.process(state, css, model);
                         XmlUtil.save(slideXml, state.getSlideDoc());
                         XmlUtil.save(relXml, state.getRelDoc());
@@ -134,6 +131,9 @@ public class PptxGenerator {
                     if (StringUtils.isNotEmpty(name) && name.startsWith("${") && name.endsWith("}")) {
                         name = name.substring(2, name.length() - 1);
                         Object value = model.get(name);
+                        if (model.containsKey(name) && value == null) {
+                            shpesToRemove.add(sh);
+                        }
                         // shapes's anchor which defines the position of this shape in the slide
                         if (sh instanceof PlaceableShape) {
                             java.awt.geom.Rectangle2D anchor = ((PlaceableShape) sh).getAnchor();
@@ -146,7 +146,7 @@ public class PptxGenerator {
                             XSLFTextShape shape = (XSLFTextShape) sh;
                             // work with a shape that can hold text
                         } else if (sh instanceof XSLFPictureShape) {
-                            if (value == null) {
+                            if (!model.containsKey(name) || value == null) {
                                 shpesToRemove.add(sh);
                             } else {
                                 XSLFPictureShape picture = (XSLFPictureShape) sh;
@@ -238,6 +238,7 @@ public class PptxGenerator {
 
                                 }
                             }
+
                         }
                     }
                 }

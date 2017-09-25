@@ -99,10 +99,11 @@ public class PptxGenerator {
                 }
             }
 
-            Properties.fillProperies(fs, model);
             fs.close();
 
             XMLSlideShow ppt = new XMLSlideShow(Files.newInputStream(outputPath));
+
+            PptxProperties.fillProperies(ppt, model);
 
             for (XSLFSlide slide : ppt.getSlides()) {
                 Boolean noBackground = (Boolean) model.get(NO_BACKGROUND);

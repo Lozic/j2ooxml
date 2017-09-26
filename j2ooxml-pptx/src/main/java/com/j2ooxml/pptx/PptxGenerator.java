@@ -11,9 +11,10 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -24,19 +25,25 @@ import org.apache.commons.imaging.ImageInfo;
 import org.apache.commons.imaging.ImageReadException;
 import org.apache.commons.imaging.Imaging;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.poi.openxml4j.opc.PackagePart;
+import org.apache.poi.openxml4j.opc.PackageRelationship;
 import org.apache.poi.sl.usermodel.PlaceableShape;
 import org.apache.poi.util.IOUtils;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFBackground;
 import org.apache.poi.xslf.usermodel.XSLFConnectorShape;
+import org.apache.poi.xslf.usermodel.XSLFPictureData;
 import org.apache.poi.xslf.usermodel.XSLFPictureShape;
 import org.apache.poi.xslf.usermodel.XSLFShape;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
 import org.apache.poi.xslf.usermodel.XSLFTextShape;
 import org.openxmlformats.schemas.drawingml.x2006.main.CTNonVisualPictureProperties;
+import org.openxmlformats.schemas.presentationml.x2006.main.CTApplicationNonVisualDrawingProps;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTBackground;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTPicture;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTPictureNonVisual;
+import org.openxmlformats.schemas.presentationml.x2006.main.CTSlide;
 import org.w3c.css.sac.InputSource;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
@@ -56,8 +63,6 @@ public class PptxGenerator {
     private static final String NO_BACKGROUND = "no-background";
 
     private VariableProcessor variableProcessor = new VariableProcessor();
-
-    private VideoReplacer videoReplacer = new VideoReplacer();
 
     public void process(Path templatePath, Path cssPath, Path outputPath, Map<String, Object> model)
             throws IOException, GenerationException {
@@ -82,7 +87,6 @@ public class PptxGenerator {
                         Path relXml = fs.getPath("/ppt/slides/_rels/" + slide + ".rels");
 
                         State state = initState(fs, slideXml, model, css);
-                        videoReplacer.replace(fs, slideXml, state, model);
                         variableProcessor.process(state, css, model);
                         XmlUtil.save(slideXml, state.getSlideDoc());
                         XmlUtil.save(relXml, state.getRelDoc());
@@ -114,7 +118,8 @@ public class PptxGenerator {
                     bgDomNode.getParentNode().removeChild(bgDomNode);
                 }
 
-                List<XSLFShape> shpesToRemove = new ArrayList<>();
+                Set<XSLFShape> shpesToRemove = new HashSet<>();
+                int videoCount = 0;
                 for (XSLFShape sh : slide.getShapes()) {
                     String name = sh.getShapeName();
                     if (StringUtils.isNotEmpty(name) && name.startsWith("${") && name.endsWith("}")) {
@@ -145,6 +150,13 @@ public class PptxGenerator {
                                 CTNonVisualPictureProperties cNvPicPr = nvPicPr.getCNvPicPr();
                                 boolean verticalCenter = !cNvPicPr.isSetPreferRelativeResize() || cNvPicPr.getPreferRelativeResize();
                                 boolean smartStretch = !cNvPicPr.getPicLocks().getNoChangeAspect();
+
+                                CTApplicationNonVisualDrawingProps nvPr = xmlObject.getNvPicPr().getNvPr();
+                                boolean video = nvPr.isSetVideoFile();
+                                if (video && shpesToRemove.contains(sh)) {
+                                    videoCount--;
+                                }
+
                                 if (value instanceof Path) {
                                     Path picturePath = (Path) value;
                                     byte[] pictureBytes = IOUtils.toByteArray(Files.newInputStream(picturePath));
@@ -190,6 +202,26 @@ public class PptxGenerator {
                                     }
                                     anchor.setRect(x + dx, y + dy, w, h);
                                     picture.setAnchor(anchor);
+                                } else if (value instanceof Pair<?, ?>) {
+                                    @SuppressWarnings("unchecked")
+                                    Pair<Path, Path> videoPair = (Pair<Path, Path>) value;
+
+                                    Path thumbPath = videoPair.getKey();
+                                    byte[] pictureBytes = IOUtils.toByteArray(Files.newInputStream(thumbPath));
+                                    picture.getPictureData().setData(pictureBytes);
+
+                                    Path videoPath = videoPair.getValue();
+                                    String videoId = nvPr.getVideoFile().getLink();
+
+                                    PackagePart p = sh.getSheet().getPackagePart();
+                                    PackageRelationship rel = p.getRelationship(videoId);
+
+                                    PackagePart imgPart = p.getRelatedPart(rel);
+                                    XSLFPictureData videoData = new XSLFPictureData(imgPart);
+                                    byte[] videoBytes = IOUtils.toByteArray(Files.newInputStream(videoPath));
+                                    videoData.setData(videoBytes);
+                                    videoCount++;
+
                                 } else {
                                     CSSRuleList rules = css.getCssRules();
                                     if (value instanceof String) {
@@ -233,6 +265,10 @@ public class PptxGenerator {
                 }
                 for (XSLFShape sh : shpesToRemove) {
                     slide.removeShape(sh);
+                }
+                if (videoCount <= 0) {
+                    CTSlide xslide = slide.getXmlObject();
+                    xslide.unsetTiming();
                 }
             }
 

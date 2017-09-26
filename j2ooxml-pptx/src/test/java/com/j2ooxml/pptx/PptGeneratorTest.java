@@ -68,8 +68,13 @@ public class PptGeneratorTest {
 
             model.put("SAPLogo", "left: 100mm;");
 
-            model.put(Properties.CREATOR, "telepuzic");
-            model.put(Properties.CREATED, LocalDateTime.now(ZoneOffset.UTC));
+            model.put(PptxProperties.CREATOR, "telepuzic");
+            model.put(PptxProperties.CREATED, LocalDateTime.now(ZoneOffset.UTC));
+            model.put(PptxProperties.KEYWORDS, "telepuzic, dummy, test; test2");
+
+            PptxProperties.addCustomProperty("dummy propery test", "dummy property test value!!!", model);
+
+            model.put("customer_title", null);
 
             generator.process(templatePath, cssPath, outputPath, model);
         } catch (Exception e) {

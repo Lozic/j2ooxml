@@ -50,13 +50,14 @@ import org.w3c.dom.css.CSSStyleSheet;
 import com.j2ooxml.pptx.css.Style;
 import com.j2ooxml.pptx.html.Html2PptxTransformer;
 import com.j2ooxml.pptx.html.Transformer;
+import com.j2ooxml.pptx.util.PptxPropertiesUtils;
 import com.steadystate.css.parser.CSSOMParser;
 
 public class PptxGenerator {
 
     private static final String NO_BACKGROUND = "no-background";
 
-    public void process(Path templatePath, Path cssPath, Path outputPath, Map<String, Object> model)
+    public static void process(Path templatePath, Path cssPath, Path outputPath, Map<String, Object> model)
             throws IOException, GenerationException {
         try {
             Files.copy(templatePath, outputPath, StandardCopyOption.REPLACE_EXISTING);
@@ -71,7 +72,7 @@ public class PptxGenerator {
 
             XMLSlideShow ppt = new XMLSlideShow(Files.newInputStream(outputPath));
 
-            PptxProperties.fillProperies(ppt, model);
+            PptxPropertiesUtils.fillProperies(ppt, model);
 
             for (XSLFSlide slide : ppt.getSlides()) {
                 Boolean noBackground = (Boolean) model.get(NO_BACKGROUND);
@@ -268,7 +269,9 @@ public class PptxGenerator {
                 }
                 if (videoCount <= 0) {
                     CTSlide xslide = slide.getXmlObject();
-                    xslide.unsetTiming();
+                    if (xslide.isSetTiming()) {
+                        xslide.unsetTiming();
+                    }
                 }
             }
 
@@ -282,7 +285,7 @@ public class PptxGenerator {
         }
     }
 
-    private double parseLength(String propertyValue) {
+    private static double parseLength(String propertyValue) {
         return Double.parseDouble(propertyValue.replace("mm", ""));
     }
 }

@@ -1,4 +1,4 @@
-package com.j2ooxml.pptx;
+package com.j2ooxml.pptx.util;
 
 import java.util.Map;
 
@@ -7,7 +7,7 @@ import org.apache.poi.POIXMLProperties.CoreProperties;
 import org.apache.poi.POIXMLProperties.CustomProperties;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 
-public final class PptxProperties {
+public final class PptxPropertiesUtils {
 
     private static final String PROPERTY_PREFIX = "pptx-";
     private static final int PROPERTY_PREFIX_LEN = PROPERTY_PREFIX.length();
@@ -19,7 +19,7 @@ public final class PptxProperties {
     public static final String CATEGORY = PROPERTY_PREFIX + "category";
     public static final String KEYWORDS = PROPERTY_PREFIX + "keywords";
 
-    private PptxProperties() {
+    private PptxPropertiesUtils() {
     }
 
     public static void addCustomProperty(String propertyName, String propertyValue, Map<String, Object> model) {

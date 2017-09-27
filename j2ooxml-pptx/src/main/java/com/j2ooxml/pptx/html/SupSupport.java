@@ -26,7 +26,7 @@ public class SupSupport implements NodeSupport {
 
     @Override
     public void process(State state, Node node) throws GenerationException {
-        state.getStyle().setBaseline(25000);
+        state.getStyle().setBaseline(25);
         transformer.iterate(state, node);
     }
 

@@ -15,15 +15,12 @@ import org.w3c.dom.css.CSSStyleSheet;
 
 import com.j2ooxml.pptx.GenerationException;
 import com.j2ooxml.pptx.State;
-import com.j2ooxml.pptx.css.CssInline;
-import com.j2ooxml.pptx.css.CssProcessor;
 import com.j2ooxml.pptx.css.Style;
+import com.j2ooxml.pptx.util.CssUtil;
 
 public class Html2PptxTransformer implements Transformer {
 
     private Set<NodeSupport> supportSet;
-
-    private CssInline cssInline = new CssInline();
 
     public Html2PptxTransformer() {
         super();
@@ -44,7 +41,7 @@ public class Html2PptxTransformer implements Transformer {
     @Override
     public void convert(State state, CSSStyleSheet css, String htmlString) throws GenerationException {
         org.jsoup.nodes.Document html = Jsoup.parse(htmlString);
-        cssInline.applyCss(css, html);
+        CssUtil.applyCss(css, html);
         org.jsoup.nodes.Node body = html.body();
 
         XSLFTextShape shape = state.getTextShape();
@@ -76,7 +73,7 @@ public class Html2PptxTransformer implements Transformer {
             Style style = state.getStyle();
             Style prevStyle = (Style) BeanUtils.cloneBean(style);
             String htmlStyle = node.attr("style");
-            CssProcessor.process(htmlStyle, style);
+            CssUtil.process(htmlStyle, style);
 
             NodeSupport support = supports(node);
 

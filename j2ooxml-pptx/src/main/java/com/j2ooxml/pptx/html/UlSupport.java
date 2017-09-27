@@ -1,8 +1,8 @@
 package com.j2ooxml.pptx.html;
 
+import org.apache.poi.xslf.usermodel.XSLFTextParagraph;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
-import org.w3c.dom.Document;
 
 import com.j2ooxml.pptx.GenerationException;
 import com.j2ooxml.pptx.State;
@@ -26,12 +26,10 @@ public class UlSupport implements NodeSupport {
 
     @Override
     public void process(State state, Node node) throws GenerationException {
-        Document slideDoc = state.getSlideDoc();
-        org.w3c.dom.Element txBody = state.getTxBody();
+        XSLFTextParagraph paragraph = state.getParagraph();
         if (node.previousSibling() != null) {
-            org.w3c.dom.Element p = slideDoc.createElement("a:p");
-            txBody.appendChild(p);
-            state.setP(p);
+            paragraph = state.getTextShape().addNewTextParagraph();
+            state.setParagraph(paragraph);
         }
         transformer.iterate(state, node);
     }

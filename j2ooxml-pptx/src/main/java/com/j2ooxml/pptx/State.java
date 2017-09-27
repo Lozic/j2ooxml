@@ -1,57 +1,35 @@
 package com.j2ooxml.pptx;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
+import org.apache.poi.xslf.usermodel.XSLFTextParagraph;
+import org.apache.poi.xslf.usermodel.XSLFTextShape;
 
 import com.j2ooxml.pptx.css.Style;
 
-/**
- * Represents {@link PptxGenerator} inner state.
- *
- */
 public class State {
 
-    private Document slideDoc;
-    private Document relDoc;
-    private Element txBody;
-    private Element p;
+    XSLFTextShape textShape;
+    XSLFTextParagraph paragraph;
     private Style style;
 
-    public State(Document slideDoc, Document relDoc) {
-        this.slideDoc = slideDoc;
-        this.relDoc = relDoc;
+    public State(XSLFTextShape textShape) {
+        super();
+        this.textShape = textShape;
     }
 
-    public Document getSlideDoc() {
-        return slideDoc;
+    public XSLFTextShape getTextShape() {
+        return textShape;
     }
 
-    public void setSlideDoc(Document slideDoc) {
-        this.slideDoc = slideDoc;
+    public void setTextShape(XSLFTextShape textShape) {
+        this.textShape = textShape;
     }
 
-    public Document getRelDoc() {
-        return relDoc;
+    public XSLFTextParagraph getParagraph() {
+        return paragraph;
     }
 
-    public void setRelDoc(Document relDoc) {
-        this.relDoc = relDoc;
-    }
-
-    public Element getTxBody() {
-        return txBody;
-    }
-
-    public void setTxBody(Element txBody) {
-        this.txBody = txBody;
-    }
-
-    public Element getP() {
-        return p;
-    }
-
-    public void setP(Element p) {
-        this.p = p;
+    public void setParagraph(XSLFTextParagraph paragraph) {
+        this.paragraph = paragraph;
     }
 
     public Style getStyle() {

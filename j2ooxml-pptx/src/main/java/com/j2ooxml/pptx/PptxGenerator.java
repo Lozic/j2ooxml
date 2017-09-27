@@ -4,10 +4,8 @@ import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.DirectoryStream;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -15,28 +13,23 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPathExpressionException;
-
+import org.apache.commons.beanutils.PropertyUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.imaging.ImageInfo;
-import org.apache.commons.imaging.ImageReadException;
 import org.apache.commons.imaging.Imaging;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.poi.openxml4j.opc.PackagePart;
 import org.apache.poi.openxml4j.opc.PackageRelationship;
-import org.apache.poi.sl.usermodel.PlaceableShape;
 import org.apache.poi.util.IOUtils;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFBackground;
-import org.apache.poi.xslf.usermodel.XSLFConnectorShape;
 import org.apache.poi.xslf.usermodel.XSLFPictureData;
 import org.apache.poi.xslf.usermodel.XSLFPictureShape;
 import org.apache.poi.xslf.usermodel.XSLFShape;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
+import org.apache.poi.xslf.usermodel.XSLFTextParagraph;
 import org.apache.poi.xslf.usermodel.XSLFTextShape;
 import org.openxmlformats.schemas.drawingml.x2006.main.CTNonVisualPictureProperties;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTApplicationNonVisualDrawingProps;
@@ -46,30 +39,26 @@ import org.openxmlformats.schemas.presentationml.x2006.main.CTPictureNonVisual;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTSlide;
 import org.w3c.css.sac.InputSource;
 import org.w3c.dom.DOMException;
-import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.css.CSSRule;
 import org.w3c.dom.css.CSSRuleList;
 import org.w3c.dom.css.CSSStyleDeclaration;
 import org.w3c.dom.css.CSSStyleRule;
 import org.w3c.dom.css.CSSStyleSheet;
-import org.xml.sax.SAXException;
 
-import com.j2ooxml.pptx.util.XmlUtil;
+import com.j2ooxml.pptx.css.Style;
+import com.j2ooxml.pptx.html.Html2PptxTransformer;
+import com.j2ooxml.pptx.html.Transformer;
 import com.steadystate.css.parser.CSSOMParser;
 
 public class PptxGenerator {
 
     private static final String NO_BACKGROUND = "no-background";
 
-    private VariableProcessor variableProcessor = new VariableProcessor();
-
     public void process(Path templatePath, Path cssPath, Path outputPath, Map<String, Object> model)
             throws IOException, GenerationException {
         try {
             Files.copy(templatePath, outputPath, StandardCopyOption.REPLACE_EXISTING);
-            FileSystem fs = FileSystems.newFileSystem(outputPath, null);
-
             CSSOMParser parser = new CSSOMParser();
             String cssString = new String(Files.readAllBytes(cssPath), StandardCharsets.UTF_8);
             if (model.containsKey("CSS")) {
@@ -78,32 +67,6 @@ public class PptxGenerator {
             }
             StringReader reader = new StringReader(cssString);
             CSSStyleSheet css = parser.parseStyleSheet(new InputSource(reader), null, null);
-
-            Path slides = fs.getPath("/ppt/slides");
-            try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(slides)) {
-                for (Path slideXml : directoryStream) {
-                    if (Files.isRegularFile(slideXml)) {
-                        String slide = slideXml.getFileName().toString();
-                        Path relXml = fs.getPath("/ppt/slides/_rels/" + slide + ".rels");
-
-                        State state = initState(fs, slideXml, model, css);
-                        variableProcessor.process(state, css, model);
-                        XmlUtil.save(slideXml, state.getSlideDoc());
-                        XmlUtil.save(relXml, state.getRelDoc());
-                        try (Stream<String> lines = Files.lines(relXml, StandardCharsets.UTF_8)) {
-                            List<String> replaced = lines
-                                    .map(line -> line.replaceAll(
-                                            "(Target=\".*?\"(\\sTargetMode=\".*?\")?)\\s(Type=\".*?\")", "$3 $1"))
-                                    .collect(Collectors.toList());
-                            lines.close();
-                            Files.delete(relXml);
-                            Files.write(relXml, replaced, StandardCharsets.UTF_8);
-                        }
-                    }
-                }
-            }
-
-            fs.close();
 
             XMLSlideShow ppt = new XMLSlideShow(Files.newInputStream(outputPath));
 
@@ -124,23 +87,55 @@ public class PptxGenerator {
                     String name = sh.getShapeName();
                     if (StringUtils.isNotEmpty(name) && name.startsWith("${") && name.endsWith("}")) {
                         name = name.substring(2, name.length() - 1);
-                        Object value = model.get(name);
-                        if (model.containsKey(name) && value == null) {
-                            shpesToRemove.add(sh);
-                        }
-                        // shapes's anchor which defines the position of this shape in the slide
-                        if (sh instanceof PlaceableShape) {
-                            java.awt.geom.Rectangle2D anchor = ((PlaceableShape) sh).getAnchor();
+                        Object value = null;
+                        String[] vars = name.split("\\.");
+                        boolean present = model.containsKey(vars[0]);
+                        value = model.get(vars[0]);
+                        int len = vars.length;
+                        if (value != null && len > 1) {
+                            for (int k = 1; k < len; k++) {
+                                try {
+                                    value = PropertyUtils.getProperty(value, vars[k]);
+                                } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                                    throw new GenerationException("Could not extract ${'" + name + "} from model.", e);
+                                }
+                            }
                         }
 
-                        if (sh instanceof XSLFConnectorShape) {
-                            XSLFConnectorShape line = (XSLFConnectorShape) sh;
-                            // work with Line
-                        } else if (sh instanceof XSLFTextShape) {
-                            XSLFTextShape shape = (XSLFTextShape) sh;
-                            // work with a shape that can hold text
+                        if (present && value == null) {
+                            shpesToRemove.add(sh);
+                        }
+                        if (sh instanceof XSLFTextShape) {
+                            XSLFTextShape textShape = (XSLFTextShape) sh;
+
+                            Transformer transformer = new Html2PptxTransformer();
+
+                            try {
+                                List<XSLFTextParagraph> textParagraphs = textShape.getTextParagraphs();
+                                Double defaultFontSize = null;
+                                if (CollectionUtils.isNotEmpty(textParagraphs)) {
+                                    XSLFTextParagraph textParagraph = textParagraphs.get(0);
+                                    defaultFontSize = textParagraph.getDefaultFontSize();
+                                }
+                                textShape.clearText();
+                                if (!StringUtils.isBlank((CharSequence) value)) {
+                                    String htmlString = (String) value;
+                                    Style style = new Style();
+                                    State state = new State(textShape);
+                                    state.setStyle(style);
+                                    if (defaultFontSize != null) {
+                                        style.setFontSize(defaultFontSize);
+                                    }
+                                    transformer.convert(state, css, htmlString);
+                                } else {
+                                    textShape.setText(" ");
+                                }
+                            } catch (DOMException e) {
+                                throw new GenerationException("Exception while working with pptx inner format.", e);
+                            }
+
                         } else if (sh instanceof XSLFPictureShape) {
-                            if (!model.containsKey(name) || value == null) {
+                            if (!present || value == null) {
                                 shpesToRemove.add(sh);
                             } else {
                                 XSLFPictureShape picture = (XSLFPictureShape) sh;
@@ -280,17 +275,6 @@ public class PptxGenerator {
         } catch (Exception e) {
             throw new GenerationException("Could not generate resulting ppt.", e);
         }
-    }
-
-    private State initState(FileSystem fs, Path slideXml, Map<String, Object> model, CSSStyleSheet css) throws IOException,
-            ParserConfigurationException, SAXException, XPathExpressionException, DOMException, ImageReadException {
-        Document slideDoc = XmlUtil.parse(slideXml);
-
-        String slide = slideXml.getFileName().toString();
-        Path slideXmlRel = fs.getPath("/ppt/slides/_rels/" + slide + ".rels");
-        Document relsDoc = XmlUtil.parse(slideXmlRel);
-
-        return new State(slideDoc, relsDoc);
     }
 
     private double parseLength(String propertyValue) {

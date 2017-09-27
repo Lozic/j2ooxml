@@ -1,5 +1,11 @@
 package com.j2ooxml.pptx.css;
 
+import java.awt.Color;
+import java.lang.reflect.Field;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.sl.usermodel.TextParagraph.TextAlign;
+
 /**
  * Simple aggregator for css style.
  *
@@ -9,12 +15,12 @@ public class Style {
     private boolean bold;
     private boolean italic;
     private boolean underline;
-    private String color;
-    private int fontSize;
-    private String liColor;
+    private Color color;
+    private Double fontSize;
+    private Color liColor;
     private String liChar;
-    private float indent;
-    private float marginLeft;
+    private double indent;
+    private double marginLeft;
     private TextAlign textAlign;
     private int baseline;
 
@@ -42,28 +48,65 @@ public class Style {
         this.underline = underline;
     }
 
-    public String getColor() {
+    public Color getColor() {
         return color;
     }
 
-    public void setColor(String color) {
+    public void setColor(Color color) {
         this.color = color;
     }
 
-    public int getFontSize() {
+    public void setColor(String color) {
+        this.color = parseColor(color);
+    }
+
+    public Double getFontSize() {
         return fontSize;
     }
 
-    public void setFontSize(int fontSize) {
+    public void setFontSize(Double fontSize) {
         this.fontSize = fontSize;
     }
 
-    public String getLiColor() {
+    public Color getLiColor() {
         return liColor;
     }
 
-    public void setLiColor(String liColor) {
+    public void setLiColor(Color liColor) {
         this.liColor = liColor;
+    }
+
+    public void setLiColor(String color) {
+        this.liColor = parseColor(color);
+    }
+
+    private Color parseColor(String color) {
+        Color result = null;
+        color = color.trim();
+        if (StringUtils.isNoneEmpty(color)) {
+            color = color.replace(" ", "").toLowerCase();
+            int length = color.length();
+            if (color.startsWith("rgb")) {
+                if (color.startsWith("rgb(")) {
+                    color = color.substring(4, length);
+                    String[] rgb = color.split(",");
+                    result = new Color(Integer.parseInt(rgb[0]), Integer.parseInt(rgb[1]), Integer.parseInt(rgb[2]));
+                } else {
+                    color = color.substring(5, length);
+                    String[] rgb = color.split(",");
+                    int alpha = 255 * (int) Math.round(Double.parseDouble(rgb[3]));
+                    result = new Color(Integer.parseInt(rgb[0]), Integer.parseInt(rgb[1]), Integer.parseInt(rgb[2]), alpha);
+                }
+            } else {
+                try {
+                    final Field f = Color.class.getField(color);
+                    result = (Color) f.get(null);
+                } catch (Exception ce) {
+                    result = null;
+                }
+            }
+        }
+        return result;
     }
 
     public String getLiChar() {
@@ -74,19 +117,19 @@ public class Style {
         this.liChar = liChar;
     }
 
-    public float getIndent() {
+    public double getIndent() {
         return indent;
     }
 
-    public void setIndent(float indent) {
+    public void setIndent(double indent) {
         this.indent = indent;
     }
 
-    public float getMarginLeft() {
+    public double getMarginLeft() {
         return marginLeft;
     }
 
-    public void setMarginLeft(float marginLeft) {
+    public void setMarginLeft(double marginLeft) {
         this.marginLeft = marginLeft;
     }
 

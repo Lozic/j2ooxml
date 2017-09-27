@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.lang.reflect.Field;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.sl.usermodel.TextParagraph.TextAlign;
 
 import com.j2ooxml.pptx.GenerationException;
 
@@ -22,7 +23,7 @@ public class CssProcessor {
                         style.setColor(value);
                         break;
                     case "font-size":
-                        style.setFontSize(Math.round(100 * Float.parseFloat(value.replace("pt", "").trim())));
+                        style.setFontSize(Double.parseDouble(value.replace("pt", "").trim()));
                         break;
                     case "font-weight":
                         if ("bold".equals(value)) {
@@ -48,7 +49,7 @@ public class CssProcessor {
                         break;
                     case "text-align":
                         if (StringUtils.isNotBlank(value)) {
-                            style.setTextAlign(TextAlign.of(value));
+                            style.setTextAlign(TextAlign.valueOf(value.toUpperCase()));
                         }
                         break;
                     default:

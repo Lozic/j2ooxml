@@ -7,9 +7,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.beanutils.BeanUtils;
+import org.apache.poi.sl.usermodel.TextParagraph.TextAlign;
+import org.apache.poi.xslf.usermodel.XSLFTextParagraph;
+import org.apache.poi.xslf.usermodel.XSLFTextShape;
 import org.jsoup.Jsoup;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.w3c.dom.css.CSSStyleSheet;
 
 import com.j2ooxml.pptx.GenerationException;
@@ -17,7 +18,6 @@ import com.j2ooxml.pptx.State;
 import com.j2ooxml.pptx.css.CssInline;
 import com.j2ooxml.pptx.css.CssProcessor;
 import com.j2ooxml.pptx.css.Style;
-import com.j2ooxml.pptx.css.TextAlign;
 
 public class Html2PptxTransformer implements Transformer {
 
@@ -47,16 +47,14 @@ public class Html2PptxTransformer implements Transformer {
         cssInline.applyCss(css, html);
         org.jsoup.nodes.Node body = html.body();
 
-        Document slideDoc = state.getSlideDoc();
-        Element p = slideDoc.createElement("a:p");
-        state.setP(p);
-        state.getTxBody().appendChild(p);
-        Element pPr = slideDoc.createElement("a:pPr");
-        p.appendChild(pPr);
+        XSLFTextShape shape = state.getTextShape();
+        XSLFTextParagraph paragraph = shape.addNewTextParagraph();
+        state.setParagraph(paragraph);
+
         Style style = state.getStyle();
         TextAlign textAlign = style.getTextAlign();
         if (textAlign != null) {
-            textAlign.apply(pPr);
+            paragraph.setTextAlign(textAlign);
         }
         iterate(state, body);
 

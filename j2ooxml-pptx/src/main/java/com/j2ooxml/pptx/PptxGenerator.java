@@ -29,6 +29,7 @@ import org.apache.poi.xslf.usermodel.XSLFPictureData;
 import org.apache.poi.xslf.usermodel.XSLFPictureShape;
 import org.apache.poi.xslf.usermodel.XSLFShape;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
+import org.apache.poi.xslf.usermodel.XSLFTable;
 import org.apache.poi.xslf.usermodel.XSLFTextParagraph;
 import org.apache.poi.xslf.usermodel.XSLFTextShape;
 import org.openxmlformats.schemas.drawingml.x2006.main.CTNonVisualPictureProperties;
@@ -105,11 +106,15 @@ public class PptxGenerator {
                         if (present && value == null) {
                             shpesToRemove.add(sh);
                         }
-                        if (sh instanceof XSLFTextShape) {
-                            XSLFTextShape textShape = (XSLFTextShape) sh;
-
+                        if (sh instanceof XSLFTextShape || sh instanceof XSLFTable) {
+                            XSLFTextShape textShape;
+                            if (sh instanceof XSLFTextShape) {
+                                textShape = (XSLFTextShape) sh;
+                            } else {
+                                XSLFTable table = (XSLFTable) sh;
+                                textShape = table.getCell(0, 0);
+                            }
                             Transformer transformer = new Html2PptxTransformer();
-
                             try {
                                 List<XSLFTextParagraph> textParagraphs = textShape.getTextParagraphs();
                                 Double defaultFontSize = null;

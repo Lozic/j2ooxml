@@ -29,6 +29,8 @@ import com.steadystate.css.parser.CSSOMParser;
 
 public class CssUtil {
 
+    public static final int DEFAULT_DPI = 72;
+
     public static void applyCss(CSSStyleSheet css, org.jsoup.nodes.Document html) {
         Map<String, Map<String, String>> styles = traverse(css, html);
         apply(styles, html);
@@ -60,10 +62,10 @@ public class CssUtil {
                         style.setLiColor(parseColor(value));
                         break;
                     case "indent":
-                        style.setIndent(Float.parseFloat(value.replace("mm", "")));
+                        style.setIndent(parseLength(value));
                         break;
                     case "margin-left":
-                        style.setMarginLeft(Float.parseFloat(value.replace("mm", "")));
+                        style.setMarginLeft(parseLength(value));
                         break;
                     case "text-decoration":
                         if ("underline".equals(value)) {
@@ -95,6 +97,43 @@ public class CssUtil {
         StringReader reader = new StringReader(cssString);
         CSSStyleSheet css = parser.parseStyleSheet(new InputSource(reader), null, null);
         return css;
+    }
+
+    /**
+     * Parses css length value and converst to points.<br/>
+     * Supported units:<br/>
+     * cm - centimeters<br/>
+     * mm - millimeters<br/>
+     * in - inches (1in = 96px = 2.54cm)<br/>
+     * px - pixels (1px = 1/96th of 1in)<br/>
+     * pt - points (1pt = 1/72 of 1in)<br/>
+     * pc - picas (1pc = 12 pt)
+     * 
+     * @param propertyValue
+     *            css property value to parse and convert
+     * @return parsed and converted to points value
+     * @throws GenerationException
+     *             in case when provided unit is not supported
+     */
+    public static double parseLength(String propertyValue) throws GenerationException {
+
+        int length = propertyValue.length();
+        String unit = propertyValue.substring(length - 2, length);
+        double value = Double.parseDouble(propertyValue.replace(unit, ""));
+        if ("in".equals(unit)) {
+            value = DEFAULT_DPI * value;
+        } else if ("cm".equals(unit)) {
+            value = DEFAULT_DPI * value / 2.54;
+        } else if ("mm".equals(unit)) {
+            value = DEFAULT_DPI * value / 25.4;
+        } else if ("px".equals(unit)) {
+            value = DEFAULT_DPI * value / 96;
+        } else if ("pc".equals(unit)) {
+            value = 12 * value;
+        } else if (!"pt".equals(unit)) {
+            throw new GenerationException("Unsupported css length unit: " + unit);
+        }
+        return value;
     }
 
     private static Color parseColor(String color) {
@@ -184,4 +223,5 @@ public class CssUtil {
             elementStyle.put(propertyName, propertyValue);
         }
     }
+
 }

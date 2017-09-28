@@ -33,6 +33,8 @@ import org.w3c.dom.css.CSSStyleDeclaration;
 import org.w3c.dom.css.CSSStyleRule;
 import org.w3c.dom.css.CSSStyleSheet;
 
+import com.j2ooxml.pptx.GenerationException;
+
 public class PptxUtil {
 
     public static void removeSlideBackground(XSLFSlide slide) {
@@ -71,14 +73,14 @@ public class PptxUtil {
             ImageInfo imageInfo = Imaging.getImageInfo(picturePath.toFile());
             int physicalHeightDpi = imageInfo.getPhysicalHeightDpi();
             if (physicalHeightDpi < 0) {
-                physicalHeightDpi = 72;
+                physicalHeightDpi = CssUtil.DEFAULT_DPI;
             }
             int physicalWidthDpi = imageInfo.getPhysicalWidthDpi();
             if (physicalWidthDpi < 0) {
-                physicalWidthDpi = 72;
+                physicalWidthDpi = CssUtil.DEFAULT_DPI;
             }
-            double wi = Math.round(72. * imageInfo.getWidth() / physicalHeightDpi);
-            double hi = Math.round(72. * imageInfo.getHeight() / physicalWidthDpi);
+            double wi = Math.round(CssUtil.DEFAULT_DPI * imageInfo.getWidth() / physicalHeightDpi);
+            double hi = Math.round(CssUtil.DEFAULT_DPI * imageInfo.getHeight() / physicalWidthDpi);
 
             double w = wp;
             double h = hp;
@@ -103,7 +105,7 @@ public class PptxUtil {
         }
     }
 
-    public static void applyPictureCss(XSLFPictureShape picture, CSSStyleSheet css, String name, Object value) {
+    public static void applyPictureCss(XSLFPictureShape picture, CSSStyleSheet css, String name, Object value) throws GenerationException {
         CSSRuleList rules = css.getCssRules();
         if (value instanceof String) {
             StringBuilder imsgeCss = new StringBuilder(" #");
@@ -126,12 +128,12 @@ public class PptxUtil {
                             String propertyValue = styleDeclaration
                                     .getPropertyValue(propertyName);
                             Rectangle2D anchor = picture.getAnchor();
+                            double length = CssUtil.parseLength(propertyValue);
                             if ("left".equals(propertyName)) {
-                                anchor.setRect(parseLength(propertyValue), anchor.getY(),
+                                anchor.setRect(length, anchor.getY(),
                                         anchor.getWidth(), anchor.getHeight());
                             } else {
-                                anchor.setRect(anchor.getX(), parseLength(propertyValue),
-                                        anchor.getWidth(), anchor.getHeight());
+                                anchor.setRect(anchor.getX(), length, anchor.getWidth(), anchor.getHeight());
                             }
                             picture.setAnchor(anchor);
                         }
@@ -158,9 +160,5 @@ public class PptxUtil {
         XSLFPictureData videoData = new XSLFPictureData(imgPart);
         byte[] videoBytes = IOUtils.toByteArray(Files.newInputStream(videoPath));
         videoData.setData(videoBytes);
-    }
-
-    private static double parseLength(String propertyValue) {
-        return Double.parseDouble(propertyValue.replace("mm", ""));
     }
 }

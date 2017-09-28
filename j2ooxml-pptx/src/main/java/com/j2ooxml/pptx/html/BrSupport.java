@@ -1,6 +1,7 @@
 package com.j2ooxml.pptx.html;
 
 import org.apache.poi.xslf.usermodel.XSLFTextParagraph;
+import org.apache.poi.xslf.usermodel.XSLFTextRun;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 
@@ -20,7 +21,8 @@ public class BrSupport implements NodeSupport {
     @Override
     public void process(State state, Node node) throws GenerationException {
         XSLFTextParagraph paragraph = state.getParagraph();
-        paragraph.addLineBreak();
+        XSLFTextRun br = paragraph.addLineBreak();
+        br.setFontSize(state.getStyle().getFontSize());
     }
 
 }

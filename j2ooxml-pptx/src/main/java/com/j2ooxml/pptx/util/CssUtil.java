@@ -1,7 +1,12 @@
 package com.j2ooxml.pptx.util;
 
 import java.awt.Color;
+import java.io.IOException;
+import java.io.StringReader;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -11,6 +16,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.sl.usermodel.TextParagraph.TextAlign;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.w3c.css.sac.InputSource;
 import org.w3c.dom.css.CSSRule;
 import org.w3c.dom.css.CSSRuleList;
 import org.w3c.dom.css.CSSStyleDeclaration;
@@ -19,6 +25,7 @@ import org.w3c.dom.css.CSSStyleSheet;
 
 import com.j2ooxml.pptx.GenerationException;
 import com.j2ooxml.pptx.css.Style;
+import com.steadystate.css.parser.CSSOMParser;
 
 public class CssUtil {
 
@@ -76,6 +83,18 @@ public class CssUtil {
         } catch (IllegalArgumentException e) {
             throw new GenerationException("Incorrect css style for element.", e);
         }
+    }
+
+    public static CSSStyleSheet parseCss(Path cssPath, Map<String, Object> model) throws IOException {
+        CSSOMParser parser = new CSSOMParser();
+        String cssString = new String(Files.readAllBytes(cssPath), StandardCharsets.UTF_8);
+        if (model.containsKey("CSS")) {
+            String modelCss = (String) model.get("CSS");
+            cssString += " " + modelCss;
+        }
+        StringReader reader = new StringReader(cssString);
+        CSSStyleSheet css = parser.parseStyleSheet(new InputSource(reader), null, null);
+        return css;
     }
 
     private static Color parseColor(String color) {

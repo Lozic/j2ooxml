@@ -53,7 +53,7 @@ public class LiSupport implements NodeSupport {
         }
         String bulletChar = StringUtils.isNotBlank(style.getLiChar()) ? style.getLiChar() : "\u2022";
         paragraph.setBulletCharacter(bulletChar);
-
+        paragraph.setBulletFontSize(120);
         transformer.iterate(state, node);
 
         paragraph = state.getTextShape().addNewTextParagraph();

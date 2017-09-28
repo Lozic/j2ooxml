@@ -14,6 +14,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.openxml4j.opc.PackagePart;
 import org.apache.poi.openxml4j.opc.PackageRelationship;
+import org.apache.poi.sl.usermodel.TextParagraph.TextAlign;
 import org.apache.poi.util.IOUtils;
 import org.apache.poi.xslf.usermodel.XSLFBackground;
 import org.apache.poi.xslf.usermodel.XSLFPictureData;
@@ -52,6 +53,16 @@ public class PptxUtil {
             defaultFontSize = textParagraph.getDefaultFontSize();
         }
         return defaultFontSize;
+    }
+
+    public static TextAlign getDefaultTextAlign(XSLFTextShape textShape) {
+        List<XSLFTextParagraph> textParagraphs = textShape.getTextParagraphs();
+        TextAlign defaultTextAlign = null;
+        if (CollectionUtils.isNotEmpty(textParagraphs)) {
+            XSLFTextParagraph textParagraph = textParagraphs.get(0);
+            defaultTextAlign = textParagraph.getTextAlign();
+        }
+        return defaultTextAlign;
     }
 
     public static void embedPicture(XSLFPictureShape picture, Path picturePath) throws IOException, ImageReadException {

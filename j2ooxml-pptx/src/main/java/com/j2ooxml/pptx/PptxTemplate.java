@@ -15,6 +15,8 @@ import org.apache.commons.imaging.ImageReadException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.openxml4j.exceptions.OpenXML4JRuntimeException;
+import org.apache.poi.sl.usermodel.TextParagraph.TextAlign;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFPictureShape;
 import org.apache.poi.xslf.usermodel.XSLFShape;
@@ -67,7 +69,11 @@ public class PptxTemplate {
             videoCount += processShape(sh, model, css, shpesToRemove);
         }
         for (XSLFShape sh : shpesToRemove) {
-            slide.removeShape(sh);
+            try {
+                slide.removeShape(sh);
+            } catch (OpenXML4JRuntimeException e) {
+                slide.getTheme();
+            }
         }
         if (videoCount <= 0) {
             CTSlide xslide = slide.getXmlObject();
@@ -135,6 +141,7 @@ public class PptxTemplate {
     private static void processTextShape(XSLFTextShape textShape, Object value, CSSStyleSheet css) throws GenerationException {
         Transformer transformer = new Html2PptxTransformer();
         Double defaultFontSize = PptxUtil.getDefaultFontSize(textShape);
+        TextAlign defaultTextAlign = PptxUtil.getDefaultTextAlign(textShape);
         textShape.clearText();
         if (!StringUtils.isBlank((CharSequence) value)) {
             String htmlString = (String) value;
@@ -143,6 +150,9 @@ public class PptxTemplate {
             state.setStyle(style);
             if (defaultFontSize != null) {
                 style.setFontSize(defaultFontSize);
+            }
+            if (defaultTextAlign != null) {
+                style.setTextAlign(defaultTextAlign);
             }
             transformer.convert(state, css, htmlString);
         } else {

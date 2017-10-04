@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.j2ooxml</groupId>
         <artifactId>j2ooxml</artifactId>
-        <version>0.0.1-SNAPSHOT</version>
+        <version>0.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>j2ooxml-pptx</artifactId>

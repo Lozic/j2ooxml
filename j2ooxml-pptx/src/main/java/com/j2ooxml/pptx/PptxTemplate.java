@@ -18,6 +18,7 @@ import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.openxml4j.exceptions.OpenXML4JRuntimeException;
 import org.apache.poi.sl.usermodel.TextParagraph.TextAlign;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
+import org.apache.poi.xslf.usermodel.XSLFNotes;
 import org.apache.poi.xslf.usermodel.XSLFPictureShape;
 import org.apache.poi.xslf.usermodel.XSLFShape;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
@@ -70,7 +71,12 @@ public class PptxTemplate {
         }
         for (XSLFShape sh : shpesToRemove) {
             try {
+                if (sh instanceof XSLFPictureShape) {
+                    XSLFPictureShape picture = (XSLFPictureShape) sh;
+                    picture.getPictureData();
+                }
                 slide.removeShape(sh);
+
             } catch (OpenXML4JRuntimeException e) {
                 slide.getTheme();
             }
@@ -79,6 +85,27 @@ public class PptxTemplate {
             CTSlide xslide = slide.getXmlObject();
             if (xslide.isSetTiming()) {
                 xslide.unsetTiming();
+            }
+        }
+        processNotes(slide, model, css);
+    }
+
+    private static void processNotes(XSLFSlide slide, Map<String, Object> model, CSSStyleSheet css) throws GenerationException {
+        XSLFNotes notes = slide.getNotes();
+        if (notes != null) {
+            for (XSLFShape shape : notes.getShapes()) {
+                if (shape instanceof XSLFTextShape) {
+                    XSLFTextShape textShape = (XSLFTextShape) shape;
+                    String text = textShape.getText();
+                    text = text.trim();
+                    if (StringUtils.isNotEmpty(text) && text.startsWith("${") && text.endsWith("}")) {
+                        text = text.substring(2, text.length() - 1);
+                        if (model.containsKey(text)) {
+                            String value = (String) model.get(text);
+                            processTextShape(textShape, value, css);
+                        }
+                    }
+                }
             }
         }
     }

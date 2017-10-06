@@ -2,6 +2,8 @@ package com.j2ooxml.pptx.util;
 
 import java.awt.geom.Rectangle2D;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -16,6 +18,7 @@ import org.apache.poi.openxml4j.opc.PackagePart;
 import org.apache.poi.openxml4j.opc.PackageRelationship;
 import org.apache.poi.sl.usermodel.TextParagraph.TextAlign;
 import org.apache.poi.util.IOUtils;
+import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFBackground;
 import org.apache.poi.xslf.usermodel.XSLFPictureData;
 import org.apache.poi.xslf.usermodel.XSLFPictureShape;
@@ -171,5 +174,24 @@ public class PptxUtil {
         XSLFPictureData videoData = new XSLFPictureData(imgPart);
         byte[] videoBytes = IOUtils.toByteArray(Files.newInputStream(videoPath));
         videoData.setData(videoBytes);
+    }
+
+    public static void merge(List<Path> slidesPaths, Path outputPath) throws IOException {
+        XMLSlideShow ppt = new XMLSlideShow();
+        for (Path slidePath : slidesPaths) {
+            InputStream is = Files.newInputStream(slidePath);
+            XMLSlideShow src = new XMLSlideShow(is);
+            is.close();
+            ppt.setPageSize(src.getPageSize());
+            Files.delete(slidePath);
+            for (XSLFSlide srcSlide : src.getSlides()) {
+                ppt.createSlide().importContent(srcSlide);
+            }
+            src.close();
+        }
+        OutputStream out = Files.newOutputStream(outputPath);
+        ppt.write(out);
+        ppt.close();
+        out.close();
     }
 }

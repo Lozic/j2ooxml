@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -23,10 +24,13 @@ import org.apache.poi.sl.usermodel.TextParagraph.TextAlign;
 import org.apache.poi.util.IOUtils;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFBackground;
+import org.apache.poi.xslf.usermodel.XSLFHyperlink;
 import org.apache.poi.xslf.usermodel.XSLFPictureData;
 import org.apache.poi.xslf.usermodel.XSLFPictureShape;
+import org.apache.poi.xslf.usermodel.XSLFShape;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
 import org.apache.poi.xslf.usermodel.XSLFTextParagraph;
+import org.apache.poi.xslf.usermodel.XSLFTextRun;
 import org.apache.poi.xslf.usermodel.XSLFTextShape;
 import org.openxmlformats.schemas.drawingml.x2006.main.CTNonVisualPictureProperties;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTApplicationNonVisualDrawingProps;
@@ -168,7 +172,8 @@ public class PptxUtil {
             ppt.setPageSize(src.getPageSize());
             Files.delete(slidePath);
             for (XSLFSlide srcSlide : src.getSlides()) {
-                ppt.createSlide().importContent(srcSlide);
+                XSLFSlide destSlide = ppt.createSlide().importContent(srcSlide);
+                fixHyperlink(srcSlide, destSlide);
             }
             src.close();
         }
@@ -176,6 +181,39 @@ public class PptxUtil {
         ppt.write(out);
         ppt.close();
         out.close();
+    }
+
+    /**
+     * fix for https://bz.apache.org/bugzilla/show_bug.cgi?id=61589
+     */
+    private static void fixHyperlink(XSLFSlide srcSlide, XSLFSlide destSlide) {
+        List<XSLFHyperlink> srcHyperlinks = getHyperlinks(srcSlide);
+        List<XSLFHyperlink> destHyperlinks = getHyperlinks(destSlide);
+        if (srcHyperlinks.size() > 0) {
+            for (int i = 0; i < srcHyperlinks.size(); i++) {
+                XSLFHyperlink srcHyperlink = srcHyperlinks.get(i);
+                XSLFHyperlink destHyperlink = destHyperlinks.get(i);
+                destHyperlink.linkToUrl(srcHyperlink.getAddress());
+            }
+        }
+    }
+
+    private static List<XSLFHyperlink> getHyperlinks(XSLFSlide slide) {
+        List<XSLFHyperlink> hyperlinks = new ArrayList<>();
+        for (XSLFShape shape : slide.getShapes()) {
+            if (shape instanceof XSLFTextShape) {
+                XSLFTextShape textShape = (XSLFTextShape) shape;
+                for (XSLFTextParagraph paragraph : textShape.getTextParagraphs()) {
+                    for (XSLFTextRun run : paragraph.getTextRuns()) {
+                        XSLFHyperlink hyperlink = run.getHyperlink();
+                        if (hyperlink != null) {
+                            hyperlinks.add(hyperlink);
+                        }
+                    }
+                }
+            }
+        }
+        return hyperlinks;
     }
 
     public static Double getDefaultFontSize(XSLFTextShape textShape) {

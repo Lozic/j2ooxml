@@ -1,5 +1,6 @@
 package com.j2ooxml.pptx.util;
 
+import java.awt.Color;
 import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,6 +17,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.openxml4j.opc.PackagePart;
 import org.apache.poi.openxml4j.opc.PackageRelationship;
+import org.apache.poi.sl.usermodel.PaintStyle;
+import org.apache.poi.sl.usermodel.PaintStyle.SolidPaint;
 import org.apache.poi.sl.usermodel.TextParagraph.TextAlign;
 import org.apache.poi.util.IOUtils;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
@@ -46,26 +49,6 @@ public class PptxUtil {
         CTBackground xmlBg = (CTBackground) bg.getXmlObject();
         Node bgDomNode = xmlBg.getDomNode();
         bgDomNode.getParentNode().removeChild(bgDomNode);
-    }
-
-    public static Double getDefaultFontSize(XSLFTextShape textShape) {
-        List<XSLFTextParagraph> textParagraphs = textShape.getTextParagraphs();
-        Double defaultFontSize = null;
-        if (CollectionUtils.isNotEmpty(textParagraphs)) {
-            XSLFTextParagraph textParagraph = textParagraphs.get(0);
-            defaultFontSize = textParagraph.getDefaultFontSize();
-        }
-        return defaultFontSize;
-    }
-
-    public static TextAlign getDefaultTextAlign(XSLFTextShape textShape) {
-        List<XSLFTextParagraph> textParagraphs = textShape.getTextParagraphs();
-        TextAlign defaultTextAlign = null;
-        if (CollectionUtils.isNotEmpty(textParagraphs)) {
-            XSLFTextParagraph textParagraph = textParagraphs.get(0);
-            defaultTextAlign = textParagraph.getTextAlign();
-        }
-        return defaultTextAlign;
     }
 
     public static void embedPicture(XSLFPictureShape picture, Path picturePath) throws IOException, ImageReadException {
@@ -193,5 +176,39 @@ public class PptxUtil {
         ppt.write(out);
         ppt.close();
         out.close();
+    }
+
+    public static Double getDefaultFontSize(XSLFTextShape textShape) {
+        List<XSLFTextParagraph> textParagraphs = textShape.getTextParagraphs();
+        Double defaultFontSize = null;
+        if (CollectionUtils.isNotEmpty(textParagraphs)) {
+            XSLFTextParagraph textParagraph = textParagraphs.get(0);
+            defaultFontSize = textParagraph.getDefaultFontSize();
+        }
+        return defaultFontSize;
+    }
+
+    public static TextAlign getDefaultTextAlign(XSLFTextShape textShape) {
+        List<XSLFTextParagraph> textParagraphs = textShape.getTextParagraphs();
+        TextAlign defaultTextAlign = null;
+        if (CollectionUtils.isNotEmpty(textParagraphs)) {
+            XSLFTextParagraph textParagraph = textParagraphs.get(0);
+            defaultTextAlign = textParagraph.getTextAlign();
+        }
+        return defaultTextAlign;
+    }
+
+    public static Color getDefaultTextColor(XSLFTextShape textShape) {
+        List<XSLFTextParagraph> textParagraphs = textShape.getTextParagraphs();
+        Color defaultTextColor = null;
+        if (CollectionUtils.isNotEmpty(textParagraphs)) {
+            XSLFTextParagraph textParagraph = textParagraphs.get(0);
+            PaintStyle fontColor = textParagraph.getTextRuns().get(0).getFontColor();
+            if (fontColor instanceof SolidPaint) {
+                SolidPaint solidPaint = (SolidPaint) fontColor;
+                defaultTextColor = solidPaint.getSolidColor().getColor();
+            }
+        }
+        return defaultTextColor;
     }
 }

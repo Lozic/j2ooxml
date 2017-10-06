@@ -1,5 +1,6 @@
 package com.j2ooxml.pptx;
 
+import java.awt.Color;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -169,6 +170,7 @@ public class PptxTemplate {
         Transformer transformer = new Html2PptxTransformer();
         Double defaultFontSize = PptxUtil.getDefaultFontSize(textShape);
         TextAlign defaultTextAlign = PptxUtil.getDefaultTextAlign(textShape);
+        Color defaultColor = PptxUtil.getDefaultTextColor(textShape);
         textShape.clearText();
         if (!StringUtils.isBlank((CharSequence) value)) {
             String htmlString = (String) value;
@@ -180,6 +182,9 @@ public class PptxTemplate {
             }
             if (defaultTextAlign != null) {
                 style.setTextAlign(defaultTextAlign);
+            }
+            if (defaultColor != null) {
+                style.setColor(defaultColor);
             }
             transformer.convert(state, css, htmlString);
         } else {

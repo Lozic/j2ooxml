@@ -101,10 +101,11 @@ public class PptxTemplate {
                     text = text.trim();
                     if (StringUtils.isNotEmpty(text) && text.startsWith("${") && text.endsWith("}")) {
                         text = text.substring(2, text.length() - 1);
-                        if (model.containsKey(text)) {
-                            String value = (String) model.get(text);
-                            processTextShape(textShape, value, css);
+                        String value = (String) model.get(text);
+                        if (value == null) {
+                            value = StringUtils.EMPTY;
                         }
+                        processTextShape(textShape, value, css);
                     }
                 }
             }

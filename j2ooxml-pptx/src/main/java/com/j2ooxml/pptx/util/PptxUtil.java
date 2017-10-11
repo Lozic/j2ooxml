@@ -20,11 +20,13 @@ import org.apache.poi.openxml4j.opc.PackagePart;
 import org.apache.poi.openxml4j.opc.PackageRelationship;
 import org.apache.poi.sl.usermodel.PaintStyle;
 import org.apache.poi.sl.usermodel.PaintStyle.SolidPaint;
+import org.apache.poi.sl.usermodel.Placeholder;
 import org.apache.poi.sl.usermodel.TextParagraph.TextAlign;
 import org.apache.poi.util.IOUtils;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFBackground;
 import org.apache.poi.xslf.usermodel.XSLFHyperlink;
+import org.apache.poi.xslf.usermodel.XSLFNotes;
 import org.apache.poi.xslf.usermodel.XSLFPictureData;
 import org.apache.poi.xslf.usermodel.XSLFPictureShape;
 import org.apache.poi.xslf.usermodel.XSLFShape;
@@ -32,6 +34,7 @@ import org.apache.poi.xslf.usermodel.XSLFSlide;
 import org.apache.poi.xslf.usermodel.XSLFTextParagraph;
 import org.apache.poi.xslf.usermodel.XSLFTextRun;
 import org.apache.poi.xslf.usermodel.XSLFTextShape;
+import org.apache.poi.xslf.usermodel.XSLFTextShapeUtils;
 import org.openxmlformats.schemas.drawingml.x2006.main.CTNonVisualPictureProperties;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTApplicationNonVisualDrawingProps;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTBackground;
@@ -174,6 +177,7 @@ public class PptxUtil {
             for (XSLFSlide srcSlide : src.getSlides()) {
                 XSLFSlide destSlide = ppt.createSlide().importContent(srcSlide);
                 fixHyperlink(srcSlide, destSlide);
+                fixNotes(srcSlide, destSlide);
             }
             src.close();
         }
@@ -181,6 +185,27 @@ public class PptxUtil {
         ppt.write(out);
         ppt.close();
         out.close();
+    }
+
+    private static void fixNotes(XSLFSlide srcSlide, XSLFSlide destSlide) {
+        XSLFNotes srcNotes = srcSlide.getNotes();
+        if (srcNotes != null) {
+            XSLFNotes destNotes = destSlide.getSlideShow().getNotesSlide(destSlide);
+            XSLFTextShape srcNotesBody = getNotesBody(srcNotes);
+            XSLFTextShape destNotesBody = getNotesBody(destNotes);
+            XSLFTextShapeUtils.copy(srcNotesBody, destNotesBody);
+        }
+    }
+
+    private static XSLFTextShape getNotesBody(XSLFNotes srcNotes) {
+        XSLFTextShape srcNotesBody = null;
+        for (XSLFTextShape placeholder : srcNotes.getPlaceholders()) {
+            if (Placeholder.BODY.equals(placeholder.getPlaceholder())) {
+                srcNotesBody = placeholder;
+                break;
+            }
+        }
+        return srcNotesBody;
     }
 
     /**
@@ -241,7 +266,11 @@ public class PptxUtil {
         Color defaultTextColor = null;
         if (CollectionUtils.isNotEmpty(textParagraphs)) {
             XSLFTextParagraph textParagraph = textParagraphs.get(0);
-            PaintStyle fontColor = textParagraph.getTextRuns().get(0).getFontColor();
+            PaintStyle fontColor = null;
+            List<XSLFTextRun> textRuns = textParagraph.getTextRuns();
+            if (textRuns.size() > 0) {
+                fontColor = textRuns.get(0).getFontColor();
+            }
             if (fontColor instanceof SolidPaint) {
                 SolidPaint solidPaint = (SolidPaint) fontColor;
                 defaultTextColor = solidPaint.getSolidColor().getColor();

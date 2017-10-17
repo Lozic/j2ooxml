@@ -30,6 +30,10 @@ public class TextSupport implements NodeSupport {
         if (color != null) {
             textRun.setFontColor(color);
         }
+        String fontFamily = style.getFontFamily();
+        if (fontFamily != null) {
+            textRun.setFontFamily(fontFamily);
+        }
         Double fontSize = style.getFontSize();
         if (fontSize != null) {
             textRun.setFontSize(fontSize);

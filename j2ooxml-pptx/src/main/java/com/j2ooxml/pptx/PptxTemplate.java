@@ -72,14 +72,9 @@ public class PptxTemplate {
         }
         for (XSLFShape sh : shpesToRemove) {
             try {
-                if (sh instanceof XSLFPictureShape) {
-                    XSLFPictureShape picture = (XSLFPictureShape) sh;
-                    picture.getPictureData();
-                }
                 slide.removeShape(sh);
-
             } catch (OpenXML4JRuntimeException e) {
-                slide.getTheme();
+                slide.removeShape(sh);
             }
         }
         if (videoCount <= 0) {
@@ -169,6 +164,7 @@ public class PptxTemplate {
 
     private static void processTextShape(XSLFTextShape textShape, Object value, CSSStyleSheet css) throws GenerationException {
         Transformer transformer = new Html2PptxTransformer();
+        String defaultFontFamily = PptxUtil.getDefaultFontFamily(textShape);
         Double defaultFontSize = PptxUtil.getDefaultFontSize(textShape);
         TextAlign defaultTextAlign = PptxUtil.getDefaultTextAlign(textShape);
         Color defaultColor = PptxUtil.getDefaultTextColor(textShape);
@@ -178,6 +174,9 @@ public class PptxTemplate {
             Style style = new Style();
             State state = new State(textShape);
             state.setStyle(style);
+            if (defaultFontFamily != null) {
+                style.setFontFamily(defaultFontFamily);
+            }
             if (defaultFontSize != null) {
                 style.setFontSize(defaultFontSize);
             }

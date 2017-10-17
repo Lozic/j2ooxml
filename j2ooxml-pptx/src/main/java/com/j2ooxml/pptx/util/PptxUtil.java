@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.imaging.ImageInfo;
@@ -60,7 +61,8 @@ public class PptxUtil {
 
     public static void embedPicture(XSLFPictureShape picture, Path picturePath) throws IOException, ImageReadException {
         byte[] pictureBytes = IOUtils.toByteArray(Files.newInputStream(picturePath));
-        picture.getPictureData().setData(pictureBytes);
+        XSLFPictureData pictureData = picture.getPictureData();
+        pictureData.setData(pictureBytes);
         CTPicture xmlPicture = (CTPicture) picture.getXmlObject();
         CTPictureNonVisual nvPicPr = xmlPicture.getNvPicPr();
         CTNonVisualPictureProperties cNvPicPr = nvPicPr.getCNvPicPr();
@@ -173,12 +175,12 @@ public class PptxUtil {
             XMLSlideShow src = new XMLSlideShow(is);
             is.close();
             ppt.setPageSize(src.getPageSize());
-            Files.delete(slidePath);
             for (XSLFSlide srcSlide : src.getSlides()) {
                 XSLFSlide destSlide = ppt.createSlide().importContent(srcSlide);
                 fixHyperlink(srcSlide, destSlide);
                 fixNotes(srcSlide, destSlide);
             }
+            Files.delete(slidePath);
             src.close();
         }
         OutputStream out = Files.newOutputStream(outputPath);
@@ -240,6 +242,30 @@ public class PptxUtil {
         }
         return hyperlinks;
     }
+
+    private static <R> R getDefaultTextShapeValue(XSLFTextShape textShape, Function<XSLFTextParagraph, R> fn) {
+        List<XSLFTextParagraph> textParagraphs = textShape.getTextParagraphs();
+        R defaultValue = null;
+        if (CollectionUtils.isNotEmpty(textParagraphs)) {
+            XSLFTextParagraph textParagraph = textParagraphs.get(0);
+            defaultValue = fn.apply(textParagraph);
+        }
+        return defaultValue;
+    }
+
+    public static String getDefaultFontFamily(XSLFTextShape textShape) {
+        return getDefaultTextShapeValue(textShape, p -> p.getDefaultFontFamily());
+    }
+
+    // public static String getDefaultFontFamily(XSLFTextShape textShape) {
+    // List<XSLFTextParagraph> textParagraphs = textShape.getTextParagraphs();
+    // String defaultFontFamily = null;
+    // if (CollectionUtils.isNotEmpty(textParagraphs)) {
+    // XSLFTextParagraph textParagraph = textParagraphs.get(0);
+    // defaultFontFamily = textParagraph.getDefaultFontFamily();
+    // }
+    // return defaultFontFamily;
+    // }
 
     public static Double getDefaultFontSize(XSLFTextShape textShape) {
         List<XSLFTextParagraph> textParagraphs = textShape.getTextParagraphs();

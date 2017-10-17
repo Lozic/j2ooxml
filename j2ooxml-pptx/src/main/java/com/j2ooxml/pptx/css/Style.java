@@ -14,6 +14,7 @@ public class Style {
     private boolean italic;
     private boolean underline;
     private Color color;
+    private String fontFamily;
     private Double fontSize;
     private Color liColor;
     private String liChar;
@@ -52,6 +53,14 @@ public class Style {
 
     public void setColor(Color color) {
         this.color = color;
+    }
+
+    public String getFontFamily() {
+        return fontFamily;
+    }
+
+    public void setFontFamily(String fontFamily) {
+        this.fontFamily = fontFamily;
     }
 
     public Double getFontSize() {

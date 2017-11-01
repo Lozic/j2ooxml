@@ -149,10 +149,17 @@ public class PptxTemplate {
                         Path picturePath = (Path) value;
                         PptxUtil.embedPicture(picture, picturePath);
                     } else if (value instanceof Pair<?, ?>) {
-                        @SuppressWarnings("unchecked")
-                        Pair<Path, Path> videoPair = (Pair<Path, Path>) value;
-                        PptxUtil.embedVideo(picture, videoPair);
-                        videoCount++;
+                        if (video) {
+                            @SuppressWarnings("unchecked")
+                            Pair<Path, Path> videoPair = (Pair<Path, Path>) value;
+                            PptxUtil.embedVideo(picture, videoPair);
+                            videoCount++;
+                        } else {
+                            @SuppressWarnings("unchecked")
+                            Pair<Path, String> imgCssPair = (Pair<Path, String>) value;
+                            PptxUtil.embedPicture(picture, imgCssPair.getLeft());
+                            PptxUtil.applyPictureCss(picture, css, name, imgCssPair.getRight());
+                        }
                     } else {
                         PptxUtil.applyPictureCss(picture, css, name, value);
                     }

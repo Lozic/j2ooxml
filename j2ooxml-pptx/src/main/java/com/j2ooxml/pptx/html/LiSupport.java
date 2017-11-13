@@ -57,6 +57,8 @@ public class LiSupport implements NodeSupport {
         transformer.iterate(state, node);
 
         paragraph = state.getTextShape().addNewTextParagraph();
+        paragraph.setSpaceAfter(0.);
+        paragraph.setSpaceBefore(0.);
         state.setParagraph(paragraph);
         if (node.nextSibling() == null) {
             if (textAlign != null) {

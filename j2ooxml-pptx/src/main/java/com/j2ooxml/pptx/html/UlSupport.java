@@ -29,6 +29,8 @@ public class UlSupport implements NodeSupport {
         XSLFTextParagraph paragraph = state.getParagraph();
         if (node.previousSibling() != null) {
             paragraph = state.getTextShape().addNewTextParagraph();
+            paragraph.setSpaceAfter(0.);
+            paragraph.setSpaceBefore(0.);
             state.setParagraph(paragraph);
         }
         transformer.iterate(state, node);
